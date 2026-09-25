@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ContractScout</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .image-container { position: relative; width: 100%; height: auto; }
+        .bbox-overlay { position: absolute; pointer-events: none; border: 2px solid red; background-color: rgba(239, 68, 68, 0.25); border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-gray-200 min-h-screen text-gray-800 font-sans">
+    <div class="max-w-7xl mx-auto px-4 py-12">
+        
+        <header class="mb-10 bg-white p-10 rounded-2xl shadow-lg border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-8 relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-2 h-full bg-blue-600"></div>
+            <div class="md:w-1/2">
+                <h1 class="text-4xl font-extrabold text-gray-900 flex items-center gap-3 tracking-tight">
+                    <i data-lucide="shield-check" class="w-10 h-10 text-blue-600"></i> ContractScout
+                </h1>
+                <p class="text-lg text-gray-600 mt-3 font-medium">Autonomous AI Compliance Auditor</p>
+                <p class="text-sm text-gray-500 mt-4 leading-relaxed">
+                    ContractScout instantly analyzes complex legal, tender, and procurement PDFs. 
+                    It identifies risky clauses, calculates potential financial exposure, and provides 
+                    visual grounding along with DOCX redlines for seamless negotiation.
+                </p>
+            </div>
+            
+            <div class="md:w-1/2 w-full flex flex-col items-center">
+                <div id="dropzone" class="w-full border-2 border-dashed border-gray-300 rounded-xl p-8 bg-gray-50 text-center transition relative group opacity-60 cursor-not-allowed">
+                    <input type="file" id="fileInput" class="absolute inset-0 w-full h-full opacity-0 cursor-not-allowed" accept="application/pdf" disabled>
+                    <i id="uploadIcon" data-lucide="upload-cloud" class="w-10 h-10 mx-auto text-gray-400 mb-3 transition-transform"></i>
+                    <span id="uploadText" class="text-base text-gray-500 font-semibold">Please agree to Terms first</span>
+                </div>
+                
+                <div class="mt-4 flex items-start gap-2 text-sm text-gray-600">
+                    <input type="checkbox" id="termsCheckbox" class="mt-1 w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500 cursor-pointer">
+                    <label for="termsCheckbox" class="cursor-pointer">
+                        I agree to the <a href="#" id="openTermsLink" class="text-blue-600 hover:underline">Terms and Conditions</a> and acknowledge that this tool provides automated AI analysis, not professional legal advice.
+                    </label>
+                </div>
+            </div>
+        </header>
+        
+        <div id="loading" class="hidden text-center py-12">
+            <i data-lucide="loader" class="w-10 h-10 animate-spin mx-auto text-blue-600 mb-4"></i>
+            <p class="text-lg font-medium">Auditing contract... Please wait.</p>
+        </div>
+
+        <div id="dashboard" class="hidden">
+            <!-- Top Metrics Row -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-sm font-semibold text-gray-500 mb-1">Total Financial Exposure</h3>
+                    <p id="financialExposure" class="text-2xl font-bold text-red-600"></p>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow">
+                    <h3 class="text-sm font-semibold text-gray-500 mb-1">Vendor Bias Score</h3>
+                    <div class="flex items-center gap-4 mt-2">
+                        <div class="w-full bg-gray-200 rounded-full h-2.5">
+                            <div id="biasMeter" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <span id="biasScoreText" class="font-bold"></span>
+                    </div>
+                </div>
+                
+                <div class="bg-white p-6 rounded-lg shadow flex flex-col justify-center items-center">
+                    <a id="downloadBtn" href="#" class="w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded transition flex justify-center items-center gap-2">
+                        <i data-lucide="download" class="w-5 h-5"></i> Export Redline (.docx)
+                    </a>
+                </div>
+            </div>
+
+            <!-- Split Screen Content Area -->
+            <div class="flex flex-col lg:flex-row gap-6">
+                <!-- Left Column (Audit Table) -->
+                <div class="w-full lg:w-1/3 bg-white rounded-lg shadow overflow-hidden flex flex-col h-[700px]">
+                    <div class="bg-gray-50 border-b px-4 py-3 font-semibold">Rules Evaluated</div>
+                    <div id="ruleList" class="flex-1 overflow-y-auto divide-y">
+                        <!-- JS populated -->
+                    </div>
+                </div>
+                
+                <!-- Right Column (Visual Grounding Canvas) -->
+                <div class="w-full lg:w-2/3 bg-white rounded-lg shadow p-6 h-[700px] overflow-y-auto flex flex-col">
+                    <div id="visualCanvas" class="relative bg-gray-50 border rounded flex-1 flex items-center justify-center">
+                        <p class="text-gray-400">Select a rule on the left to view grounding.</p>
+                    </div>
+                    
+                    <div id="ruleDetails" class="mt-6 hidden bg-blue-50 border border-blue-100 rounded-lg p-4">
+                        <h4 class="font-bold text-blue-900 mb-2">Finding</h4>
+                        <p id="findingText" class="text-sm text-blue-800 mb-4"></p>
+                        <h4 class="font-bold text-green-900 mb-2">Suggested Redline</h4>
+                        <p id="redlineText" class="text-sm text-green-800 font-medium"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Terms and Conditions Modal -->
+    <div id="termsModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[80vh] flex flex-col">
+            <div class="p-6 border-b flex justify-between items-center">
+                <h2 class="text-2xl font-bold text-gray-900">Terms and Conditions</h2>
+                <button id="closeTermsModal" class="text-gray-500 hover:text-gray-700">
+                    <i data-lucide="x" class="w-6 h-6"></i>
+                </button>
+            </div>
+            <div class="p-6 overflow-y-auto flex-1 space-y-4 text-sm text-gray-700">
+                <h3 class="font-bold text-gray-900">1. Acceptance of Terms</h3>
+                <p>By accessing, installing, or utilizing the ContractScout application, API, or dashboard ("the Service"), you agree to be bound by these Terms and Conditions. If you do not agree to these terms, you may not use the Service.</p>
+                
+                <h3 class="font-bold text-gray-900">2. Description of Service</h3>
+                <p>ContractScout provides an automated software pipeline that utilizes artificial intelligence to parse text-searchable PDF documents, evaluate them against a configured compliance playbook, estimate potential financial exposure, and generate suggested redlined modifications in a Word (.docx) format.</p>
+                
+                <h3 class="font-bold text-gray-900">3. Explicit Disclaimer of Legal and Financial Advice</h3>
+                <p>ContractScout is a technological tool, not a law firm, attorney, or financial advisor.</p>
+                <ul class="list-disc pl-5 space-y-2">
+                    <li><strong>No Attorney-Client Relationship:</strong> Use of the Service does not create an attorney-client relationship between you and ContractScout or its creators.</li>
+                    <li><strong>Not Legal Counsel:</strong> The visual grounding highlights, risk flags, and redlined Word exports are algorithmic suggestions based on user-configured playbooks. They do not constitute legal advice, legal opinions, or binding regulatory guidance.</li>
+                    <li><strong>Not Financial Guarantees:</strong> The "Financial Exposure Calculator" provides automated, estimated metrics (e.g., "Dollar-at-Risk") based on the text provided. These are strictly mathematical estimations for internal prioritization and do not represent guaranteed financial liabilities, market realities, or binding damage assessments.</li>
+                    <li><strong>Mandatory Human Review:</strong> You are solely responsible for reviewing, verifying, and approving any contracts, clauses, or redlines generated by the Service before executing them or presenting them to third parties.</li>
+                </ul>
+
+                <h3 class="font-bold text-gray-900">4. Artificial Intelligence and Output Accuracy</h3>
+                <p>The Service relies on third-party Large Language Models (LLMs), including but not limited to OpenAI, to process natural language.</p>
+                <ul class="list-disc pl-5 space-y-2">
+                    <li><strong>Inherent Limitations:</strong> You acknowledge that AI systems are subject to hallucinations, misinterpretations of complex legal phrasing, and omission of nuanced context.</li>
+                    <li><strong>Clause Grouping Heuristics:</strong> Our custom PDF parsing heuristic relies on visual spacing and standard numbering. Non-standard, poorly formatted, or scanned documents (lacking OCR) may result in incomplete or highly inaccurate auditing.</li>
+                    <li><strong>No Warranty on Accuracy:</strong> ContractScout provides all outputs, including the JSON-validated audits and visual bounding boxes, on an "AS IS" and "AS AVAILABLE" basis without warranties of perfect accuracy or completeness.</li>
+                </ul>
+
+                <h3 class="font-bold text-gray-900">5. Data Privacy and Confidentiality</h3>
+                <ul class="list-disc pl-5 space-y-2">
+                    <li><strong>Data Processing:</strong> By uploading documents, you grant ContractScout the right to process the text contained within. You acknowledge that document text is transmitted to third-party LLM providers (e.g., OpenAI) via API for processing.</li>
+                    <li><strong>Prohibited Data:</strong> You agree not to upload documents containing highly classified government information, unredacted personal health information (PHI), or material that violates third-party non-disclosure agreements (NDAs) that prohibit automated or third-party processing.</li>
+                    <li><strong>Ephemeral Storage:</strong> While the system utilizes in-memory dictionaries and ephemeral ChromaDB instances, you are responsible for ensuring that your deployment environment (e.g., the Uvicorn server) complies with your organization’s data retention and security policies.</li>
+                </ul>
+
+                <h3 class="font-bold text-gray-900">6. User Responsibilities and Restrictions</h3>
+                <p>You agree not to:</p>
+                <ul class="list-disc pl-5 space-y-2">
+                    <li>Use the Service to generate fraudulent contracts or deceptive legal documents.</li>
+                    <li>Attempt to reverse-engineer, decompile, or disrupt the Service's parsing heuristics or concurrent auditing logic.</li>
+                    <li>Deploy the application in a multi-worker production environment without implementing the necessary state-management infrastructure (e.g., Redis or SQLite), as outlined in the system documentation.</li>
+                </ul>
+
+                <h3 class="font-bold text-gray-900">7. Limitation of Liability</h3>
+                <p>To the maximum extent permitted by applicable law, in no event shall ContractScout, its developers, or its affiliates be liable for any indirect, punitive, incidental, special, consequential, or exemplary damages, including without limitation damages for loss of profits, goodwill, data, or other intangible losses, arising out of or relating to the use of, or inability to use, the Service. This includes financial losses incurred due to missing clauses, inaccurate risk calculations, or executed contracts that relied upon ContractScout’s outputs.</p>
+
+                <h3 class="font-bold text-gray-900">8. Modifications to the Service and Terms</h3>
+                <p>We reserve the right to modify or discontinue, temporarily or permanently, the Service (or any part thereof) with or without notice. We may update these Terms and Conditions at any time. Continued use of the Service following any such changes constitutes your acceptance of the new Terms.</p>
+
+                <h3 class="font-bold text-gray-900">9. Governing Law</h3>
+                <p>These Terms shall be governed by and construed in accordance with standard commercial law practices, without regard to its conflict of law provisions. Any disputes arising from these terms will be subject to the exclusive jurisdiction of the applicable regional courts.</p>
+            </div>
+            <div class="p-6 border-t bg-gray-50 flex justify-end rounded-b-lg">
+                <button id="acceptTermsBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-6 rounded transition">
+                    Close & Accept
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        lucide.createIcons();
+        
+        const fileInput = document.getElementById('fileInput');
+        const uploadText = document.getElementById('uploadText');
+        const loading = document.getElementById('loading');
+        const dashboard = document.getElementById('dashboard');
+        const termsCheckbox = document.getElementById('termsCheckbox');
+        const dropzone = document.getElementById('dropzone');
+        const uploadIcon = document.getElementById('uploadIcon');
+        const termsModal = document.getElementById('termsModal');
+        
+        // Modal Logic
+        document.getElementById('openTermsLink').addEventListener('click', (e) => {
+            e.preventDefault();
+            termsModal.classList.remove('hidden');
+        });
+        
+        const closeTerms = () => {
+            termsModal.classList.add('hidden');
+        };
+        
+        document.getElementById('closeTermsModal').addEventListener('click', closeTerms);
+        document.getElementById('acceptTermsBtn').addEventListener('click', () => {
+            termsCheckbox.checked = true;
+            termsCheckbox.dispatchEvent(new Event('change'));
+            closeTerms();
+        });
+
+        // Close modal on click outside
+        termsModal.addEventListener('click', (e) => {
+            if (e.target === termsModal) {
+                closeTerms();
+            }
+        });
+
+        termsCheckbox.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                fileInput.disabled = false;
+                fileInput.classList.remove('cursor-not-allowed');
+                fileInput.classList.add('cursor-pointer');
+                dropzone.classList.remove('border-gray-300', 'bg-gray-50', 'opacity-60', 'cursor-not-allowed');
+                dropzone.classList.add('border-blue-300', 'bg-blue-50', 'cursor-pointer', 'hover:bg-blue-100');
+                uploadIcon.classList.remove('text-gray-400');
+                uploadIcon.classList.add('text-blue-500', 'group-hover:scale-110');
+                uploadText.classList.remove('text-gray-500');
+                uploadText.classList.add('text-blue-800');
+                uploadText.textContent = "Drop PDF here or click to upload";
+            } else {
+                fileInput.disabled = true;
+                fileInput.classList.add('cursor-not-allowed');
+                fileInput.classList.remove('cursor-pointer');
+                dropzone.classList.add('border-gray-300', 'bg-gray-50', 'opacity-60', 'cursor-not-allowed');
+                dropzone.classList.remove('border-blue-300', 'bg-blue-50', 'cursor-pointer', 'hover:bg-blue-100');
+                uploadIcon.classList.add('text-gray-400');
+                uploadIcon.classList.remove('text-blue-500', 'group-hover:scale-110');
+                uploadText.classList.add('text-gray-500');
+                uploadText.classList.remove('text-blue-800');
+                uploadText.textContent = "Please agree to Terms first";
+            }
+        });
+        
+        let currentReportId = null;
+        let currentResults = [];
+
+        fileInput.addEventListener('change', async (e) => {
+            if (!termsCheckbox.checked) {
+                // Failsafe in case of script bypassing
+                alert("Please agree to the Terms and Conditions before uploading a document.");
+                fileInput.value = "";
+                return;
+            }
+
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            uploadText.textContent = `Uploading ${file.name}...`;
+            loading.classList.remove('hidden');
+            dashboard.classList.add('hidden');
+            
+            const formData = new FormData();
+            formData.append("file", file);
+            
+            try {
+                const res = await fetch('/api/audit', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!res.ok) {
+                    const error = await res.json();
+                    throw new Error(error.detail || "Upload failed");
+                }
+                
+                const report = await res.json();
+                renderDashboard(report);
+            } catch (err) {
+                alert(err.message);
+                uploadText.textContent = "Drop PDF here or click to upload";
+            } finally {
+                loading.classList.add('hidden');
+                uploadText.textContent = "Drop PDF here or click to upload";
+            }
+        });
+
+        function renderDashboard(report) {
+            currentReportId = report.report_id;
+            currentResults = report.results;
+            
+            document.getElementById('financialExposure').textContent = report.total_financial_exposure;
+            
+            const biasMeter = document.getElementById('biasMeter');
+            const biasScoreText = document.getElementById('biasScoreText');
+            biasMeter.style.width = `${report.overall_bias_score}%`;
+            biasScoreText.textContent = `${report.overall_bias_score}/100`;
+            
+            // Color based on bias
+            biasMeter.className = `h-2.5 rounded-full ${report.overall_bias_score > 60 ? 'bg-red-500' : report.overall_bias_score > 30 ? 'bg-yellow-500' : 'bg-green-500'}`;
+            
+            document.getElementById('downloadBtn').href = `/api/export/docx/${report.report_id}`;
+            
+            const ruleList = document.getElementById('ruleList');
+            ruleList.innerHTML = '';
+            
+            report.results.forEach((rule, idx) => {
+                const item = document.createElement('div');
+                item.className = 'p-4 hover:bg-gray-50 cursor-pointer transition flex justify-between items-center';
+                item.onclick = () => selectRule(idx);
+                
+                let badgeColor = 'bg-gray-100 text-gray-800';
+                if (rule.status === 'PASS') badgeColor = 'bg-green-100 text-green-800';
+                if (rule.status === 'FAIL') badgeColor = 'bg-red-100 text-red-800';
+                if (rule.status === 'RISK') badgeColor = 'bg-yellow-100 text-yellow-800';
+                
+                item.innerHTML = `
+                    <div>
+                        <div class="font-medium text-sm text-gray-900">${rule.rule_name}</div>
+                        <div class="text-xs text-gray-500 mt-1">${rule.risk_severity}</div>
+                    </div>
+                    <span class="px-2 py-1 rounded text-xs font-bold uppercase ${badgeColor}">${rule.status}</span>
+                `;
+                ruleList.appendChild(item);
+            });
+            
+            dashboard.classList.remove('hidden');
+            if(report.results.length > 0) {
+                selectRule(0);
+            }
+        }
+
+        function selectRule(idx) {
+            const rule = currentResults[idx];
+            const canvas = document.getElementById('visualCanvas');
+            const details = document.getElementById('ruleDetails');
+            
+            // Set details
+            document.getElementById('findingText').textContent = rule.finding;
+            document.getElementById('redlineText').textContent = rule.suggested_redline || "No redline suggested.";
+            details.classList.remove('hidden');
+            
+            // Set visual grounding
+            if (rule.original_clause) {
+                const bbox = rule.original_clause.bbox;
+                canvas.innerHTML = `
+                    <div class="image-container">
+                        <img src="/api/page/${currentReportId}/${bbox.page_number}" alt="Page ${bbox.page_number}" class="w-full h-auto rounded shadow-sm border">
+                        <div class="bbox-overlay" style="left: ${bbox.left_pct}%; top: ${bbox.top_pct}%; width: ${bbox.width_pct}%; height: ${bbox.height_pct}%;"></div>
+                    </div>
+                `;
+            } else {
+                canvas.innerHTML = `
+                    <div class="text-center p-8">
+                        <i data-lucide="file-warning" class="w-12 h-12 text-yellow-500 mx-auto mb-4"></i>
+                        <p class="text-gray-700 font-medium text-lg">This clause was not found anywhere in the document.</p>
+                        <p class="text-gray-500 text-sm mt-2">See the suggested addition on the left.</p>
+                    </div>
+                `;
+                lucide.createIcons();
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pydantic>=2.0
+pdfplumber
+pillow
+python-docx
+chromadb
+sentence-transformers
+rank-bm25
+python-dotenv
+openai>=1.0
+reportlab
+pytest

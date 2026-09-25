@@ -1,0 +1,37 @@
+[
+  {
+    "rule_id": "R001",
+    "rule_name": "Payment Terms",
+    "standard_requirement": "Must be Net 30 or greater.",
+    "risk_trigger": "Reject payment terms < 30 days or punitive late fees (>1% per month).",
+    "recommended_clause": "Payment shall be due within thirty (30) days following receipt of an undisputed invoice."
+  },
+  {
+    "rule_id": "R002",
+    "rule_name": "Liability Cap",
+    "standard_requirement": "Must be capped at 100% of total contract value.",
+    "risk_trigger": "Reject uncapped or missing liability caps.",
+    "recommended_clause": "In no event shall either party's aggregate liability arising out of or related to this Agreement exceed the total amount paid and payable by Customer hereunder."
+  },
+  {
+    "rule_id": "R003",
+    "rule_name": "Liquidated Damages",
+    "standard_requirement": "Must not exceed 0.5% per week or 5% maximum total contract cap.",
+    "risk_trigger": "Reject clauses where liquidated damages exceed 0.5% per week or a 5% overall cap.",
+    "recommended_clause": "Liquidated damages for delay shall be assessed at 0.5% of the delayed deliverable value per week, capped at 5% of the total contract value."
+  },
+  {
+    "rule_id": "R004",
+    "rule_name": "Indemnification",
+    "standard_requirement": "Must exclude consequential, punitive, and indirect damages.",
+    "risk_trigger": "Reject if indemnification covers consequential, punitive, or indirect damages.",
+    "recommended_clause": "Neither party shall be liable for indirect, incidental, special, consequential or punitive damages, whether under tort, contract or otherwise."
+  },
+  {
+    "rule_id": "R005",
+    "rule_name": "Governing Law & Jurisdiction",
+    "standard_requirement": "Must be specified and mutual.",
+    "risk_trigger": "Reject if governing law or jurisdiction is missing, unilateral, or unusually biased.",
+    "recommended_clause": "This Agreement shall be governed by the laws of the State of Delaware, without regard to its conflict of law principles."
+  }
+]
