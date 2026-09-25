@@ -2,6 +2,7 @@ import os
 import uuid
 import json
 import tempfile
+import logging
 from fastapi import FastAPI, UploadFile, HTTPException
 from fastapi.responses import Response, FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -9,6 +10,9 @@ from .parser import extract_document, render_page_image
 from .indexer import Indexer
 from .auditor import run_audit_pipeline, ContractAuditReport
 from .docx_generator import generate_redline_docx
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -21,7 +25,13 @@ with open("config/compliance_playbook.json", "r") as f:
 
 @app.post("/api/audit", response_model=ContractAuditReport)
 async def audit_endpoint(file: UploadFile):
+    if file.content_type != "application/pdf":
+        raise HTTPException(status_code=400, detail="Invalid file type. Only PDF files are allowed.")
+        
     content = await file.read()
+    if len(content) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="File too large. Maximum size is 10MB.")
+        
     report_id = str(uuid.uuid4())
     
     # Save temp pdf
@@ -41,7 +51,8 @@ async def audit_endpoint(file: UploadFile):
         
         return report
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.error(f"Error auditing contract: {str(e)}")
+        raise HTTPException(status_code=400, detail="Failed to process the contract. Please ensure it is a valid PDF.")
 
 @app.get("/api/page/{report_id}/{page_num}")
 async def get_page_image(report_id: str, page_num: int):
@@ -51,7 +62,8 @@ async def get_page_image(report_id: str, page_num: int):
         img_bytes = render_page_image(pdfs_cache[report_id], page_num)
         return Response(content=img_bytes, media_type="image/png")
     except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        logger.error(f"Error generating page image: {str(e)}")
+        raise HTTPException(status_code=400, detail="Failed to render page image.")
 
 @app.get("/api/export/docx/{report_id}")
 async def export_docx(report_id: str):
