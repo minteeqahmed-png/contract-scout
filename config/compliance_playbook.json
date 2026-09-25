@@ -33,5 +33,12 @@
     "standard_requirement": "Must be specified and mutual.",
     "risk_trigger": "Reject if governing law or jurisdiction is missing, unilateral, or unusually biased.",
     "recommended_clause": "This Agreement shall be governed by the laws of the State of Delaware, without regard to its conflict of law principles."
+  },
+  {
+    "rule_id": "R006",
+    "rule_name": "Application Security Requirements",
+    "standard_requirement": "Vendor must explicitly protect against common web vulnerabilities, including: cross-site scripting (XSS), cross-site request forgery (CSRF), insecure file uploads, path traversal, server-side request forgery (SSRF), broken password resets, weak session management, vulnerable JWT secrets, overly inclusive CORS, missing rate limits, exposed test/staging environments, default credentials, unsigned webhooks, client-side only payment checks, IDOR/BOLA, trusting client input, sensitive logs, and exposed source maps.",
+    "risk_trigger": "Reject if the contract does not hold the vendor liable for securing against these specific web vulnerabilities or lacks a comprehensive application security warranty.",
+    "recommended_clause": "Vendor represents and warrants that the Software/Service is designed and tested to protect against standard web vulnerabilities, including but not limited to XSS, CSRF, SSRF, IDOR/BOLA, insecure file uploads, weak session management, and missing rate limits, and that no default credentials or exposed staging environments will be accessible in production."
   }
 ]
