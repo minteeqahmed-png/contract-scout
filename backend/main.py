@@ -3,7 +3,9 @@ import uuid
 import json
 import tempfile
 import logging
+from pathlib import Path
 from fastapi import FastAPI, UploadFile, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, FileResponse
 from fastapi.staticfiles import StaticFiles
 from .parser import extract_document, render_page_image
@@ -14,22 +16,33 @@ from .docx_generator import generate_redline_docx
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Resolve paths relative to this file so the server works from any working directory
+BASE_DIR = Path(__file__).resolve().parent.parent
+STATIC_DIR = BASE_DIR / "static"
+PLAYBOOK_PATH = BASE_DIR / "config" / "compliance_playbook.json"
+
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.middleware("http")
 async def add_security_headers(request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
-    response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    response.headers["Content-Security-Policy"] = "default-src 'self' cdn.tailwindcss.com unpkg.com; img-src 'self' data:;"
+    response.headers["Content-Security-Policy"] = "default-src 'self' cdn.tailwindcss.com unpkg.com 'unsafe-inline' 'unsafe-eval'; img-src 'self' data: blob:;"
     return response
 
 # In-memory cache: ONLY reliable with a single worker
 reports_cache = {}
 pdfs_cache = {}
 
-with open("config/compliance_playbook.json", "r") as f:
+with open(PLAYBOOK_PATH, "r") as f:
     playbook = json.load(f)
 
 @app.post("/api/audit", response_model=ContractAuditReport)
@@ -60,8 +73,9 @@ async def audit_endpoint(file: UploadFile):
         
         return report
     except Exception as e:
-        logger.error(f"Error auditing contract: {str(e)}")
-        raise HTTPException(status_code=400, detail="Failed to process the contract. Please ensure it is a valid PDF.")
+        import traceback
+        logger.error(f"Error auditing contract: {type(e).__name__}: {str(e)}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=400, detail=f"Failed to process: {type(e).__name__}: {str(e)}")
 
 @app.get("/api/page/{report_id}/{page_num}")
 async def get_page_image(report_id: str, page_num: int):
@@ -87,4 +101,4 @@ async def export_docx(report_id: str):
         headers={"Content-Disposition": f"attachment; filename=audit_{report_id}.docx"}
     )
 
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
+app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="static")

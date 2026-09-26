@@ -1,0 +1,21 @@
+[project]
+name = "contract-scout"
+version = "0.1.0"
+description = "Contract Scout Backend"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic>=2.0",
+    "pdfplumber",
+    "pillow",
+    "python-docx",
+    "chromadb",
+    "sentence-transformers",
+    "rank-bm25",
+    "python-dotenv",
+    "openai>=1.0",
+    "reportlab",
+    "pytest",
+    "python-multipart"
+]
